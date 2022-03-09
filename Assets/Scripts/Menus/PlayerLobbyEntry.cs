@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
+using Photon.Pun;
+using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,15 +20,40 @@ namespace Tanks
         [SerializeField] private Image teamHolder;
         [SerializeField] private List<Sprite> teamBackgrounds;
 
-        public int PlayerTeam { get; set; }  // TODO: Update player team to other clients
+        private Player player;
 
-        public bool IsPlayerReady { get; set; } // TODO: Update player ready status to other clients
-
-        private bool IsLocalPlayer => true; // TODO: Get if this entry belongs to the local player
-
-        public void Setup()
+        public int PlayerTeam
         {
-            // TODO: Store and update player information
+            get => player.CustomProperties.ContainsKey("Team") ? (int)player.CustomProperties["Team"] : 0;
+            set
+            {
+                Hashtable hash = new Hashtable { { "Team", value } };
+                player.SetCustomProperties(hash);
+            }
+        }
+
+        public bool IsPlayerReady
+        {
+            get => player.CustomProperties.ContainsKey("IsReady") && (bool)player.CustomProperties["IsReady"];
+            set
+            {
+                Hashtable hash = new Hashtable { { "IsReady", value } };
+                player.SetCustomProperties(hash);
+            }
+        }
+
+        private bool IsLocalPlayer => Equals(player, PhotonNetwork.LocalPlayer);
+
+        public void Setup(Player entryPlayer)
+        {
+            player = entryPlayer;
+
+            if (IsLocalPlayer)
+            {
+                PlayerTeam = (player.ActorNumber - 1) % PhotonNetwork.CurrentRoom.MaxPlayers;
+            }
+
+            playerName.text = player.NickName;
 
             if (!IsLocalPlayer)
                 Destroy(changeTeamButton);
@@ -43,6 +71,9 @@ namespace Tanks
 
         private void Start()
         {
+            Debug.Assert(PhotonNetwork.CurrentRoom.MaxPlayers == teamBackgrounds.Count,
+                "Incorrect number of team backgrounds");
+
             waitingButton.onClick.AddListener(() => OnReadyButtonClick(true));
             readyButton.onClick.AddListener(() => OnReadyButtonClick(false));
             changeTeamButton.onClick.AddListener(OnChangeTeamButtonClicked);
@@ -53,7 +84,7 @@ namespace Tanks
 
         private void OnChangeTeamButtonClicked()
         {
-            // TODO: Change player team
+            PlayerTeam = (PlayerTeam + 1) % PhotonNetwork.CurrentRoom.MaxPlayers;
         }
 
         private void OnReadyButtonClick(bool isReady)

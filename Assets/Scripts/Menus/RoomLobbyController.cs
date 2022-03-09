@@ -1,10 +1,15 @@
+using System.Collections.Generic;
+using System.Linq;
+using ExitGames.Client.Photon;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Tanks
 {
-    public class RoomLobbyController : MonoBehaviour
+    public class RoomLobbyController : MonoBehaviourPunCallbacks
     {
         [SerializeField] private Button startButton;
         [SerializeField] private Button closeButton;
@@ -12,39 +17,78 @@ namespace Tanks
         [SerializeField] private PlayerLobbyEntry playerLobbyEntryPrefab;
         [SerializeField] private RectTransform entriesHolder;
 
-        // TODO: Create and Delete player entries
+        private Dictionary<Player, PlayerLobbyEntry> lobbyEntries;
 
-        private void AddLobbyEntry()
+        private bool IsEveryPlayerReady => lobbyEntries.Values.ToList().TrueForAll(entry => entry.IsPlayerReady);
+
+        public override void OnPlayerEnteredRoom(Player newPlayer)
+        {
+            AddLobbyEntry(newPlayer);
+            UpdateStartButton();
+        }
+
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            Destroy(lobbyEntries[otherPlayer].gameObject);
+            lobbyEntries.Remove(otherPlayer);
+
+            UpdateStartButton();
+        }
+
+        public override void OnMasterClientSwitched(Player newMasterClient)
+        {
+            UpdateStartButton();
+        }
+
+        public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
+        {
+            lobbyEntries[targetPlayer].UpdateVisuals();
+
+            UpdateStartButton();
+        }
+
+        private void AddLobbyEntry(Player player)
         {
             var entry = Instantiate(playerLobbyEntryPrefab, entriesHolder);
-            entry.Setup();
-
-            // TODO: track created player lobby entries
+            entry.Setup(player);
+            lobbyEntries.Add(player, entry);
         }
 
         private void Start()
         {
             LoadingGraphics.Disable();
+            PhotonNetwork.AutomaticallySyncScene = true;
             DestroyHolderChildren();
 
             closeButton.onClick.AddListener(OnCloseButtonClicked);
             startButton.onClick.AddListener(OnStartButtonClicked);
             startButton.gameObject.SetActive(false);
+
+            lobbyEntries = new Dictionary<Player, PlayerLobbyEntry>(PhotonNetwork.CurrentRoom.MaxPlayers);
+            foreach (var player in PhotonNetwork.CurrentRoom.Players.Values)
+                AddLobbyEntry(player);
         }
 
         private void UpdateStartButton()
         {
-            // TODO: Show start button only to the master client and when all players are ready
+            startButton.gameObject.SetActive(PhotonNetwork.IsMasterClient && IsEveryPlayerReady);
         }
 
         private void OnStartButtonClicked()
         {
-            // TODO: Load gameplay level for all clients
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                Debug.LogError("Trying to start game while not being the MasterClient");
+                return;
+            }
+
+            PhotonNetwork.CurrentRoom.IsOpen = false;
+            PhotonNetwork.LoadLevel("Gameplay");
         }
 
         private void OnCloseButtonClicked()
         {
-            // TODO: Leave room
+            PhotonNetwork.LeaveRoom();
             SceneManager.LoadScene("MainMenu");
         }
 
