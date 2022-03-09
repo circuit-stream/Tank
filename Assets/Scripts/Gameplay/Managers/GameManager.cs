@@ -1,6 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -14,7 +17,7 @@ namespace Tanks
         public Color color;
     }
 
-    public class GameManager : MonoBehaviour
+    public class GameManager : MonoBehaviour, IOnEventCallback
     {
         private const float MAX_DEPENETRATION_VELOCITY = float.PositiveInfinity;
 
@@ -39,6 +42,7 @@ namespace Tanks
         {
             tankManagers.Add(tankManager);
             cameraController.targets.Add(tankManager.transform);
+
             return teamConfigs[team];
         }
 
@@ -46,20 +50,29 @@ namespace Tanks
         {
             Physics.defaultMaxDepenetrationVelocity = MAX_DEPENETRATION_VELOCITY;
 
-            tankManagers = new List<TankManager>();
+            tankManagers = new List<TankManager>(PhotonNetwork.CurrentRoom.PlayerCount);
             SpawnPlayerTank();
 
             StartRound();
         }
 
+        private void OnEnable()
+        {
+            PhotonNetwork.AddCallbackTarget(this);
+        }
+
+        public void OnDisable()
+        {
+            PhotonNetwork.RemoveCallbackTarget(this);
+        }
+
         private void SpawnPlayerTank()
         {
-            // TODO: Get team from photon
-            var team = 1;
+            var team = (int)PhotonNetwork.LocalPlayer.CustomProperties["Team"];
             var config = teamConfigs[team];
             var spawnPoint = config.spawnPoint;
 
-            Instantiate(tankPrefab, spawnPoint.position, spawnPoint.rotation);
+            PhotonNetwork.Instantiate(tankPrefab.name, spawnPoint.position, spawnPoint.rotation);
         }
 
         private void StartRound()
@@ -99,7 +112,7 @@ namespace Tanks
 
             if (gameWinner != null)
             {
-                // TODO: Leave photon room
+                PhotonNetwork.LeaveRoom();
                 SceneManager.LoadScene("MainMenu");
             }
             else StartRound();
@@ -183,6 +196,12 @@ namespace Tanks
             if (!OneTankLeft()) yield break;
 
             StartCoroutine(RoundEnding());
+        }
+
+        public void OnEvent(EventData photonEvent)
+        {
+            if (photonEvent.Code == TankHealth.TANK_DIED_PHOTON_EVENT)
+                StartCoroutine(HandleTankDeath());
         }
     }
 }

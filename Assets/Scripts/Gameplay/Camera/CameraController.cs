@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
 
 namespace Tanks
@@ -18,7 +19,7 @@ namespace Tanks
         private void Awake()
         {
             mainCamera = GetComponentInChildren<Camera>();
-            targets = new List<Transform>();
+            targets = new List<Transform>(PhotonNetwork.CurrentRoom.PlayerCount);
         }
 
         private void FixedUpdate()

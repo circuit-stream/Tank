@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Photon.Pun;
+using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Tanks
@@ -15,6 +16,8 @@ namespace Tanks
         public AudioClip engineDriving;
 		public float pitchRange = 0.2f;
 
+        private PhotonView photonView;
+
         private Rigidbody tankRigidbody;
         private float movementInputValue;
         private float turnInputValue;
@@ -29,6 +32,7 @@ namespace Tanks
         private void Awake()
         {
             tankRigidbody = GetComponent<Rigidbody>();
+            photonView = GetComponent<PhotonView>();
 
             tankRigidbody.isKinematic = false;
         }
@@ -58,6 +62,8 @@ namespace Tanks
 
         private void Update()
         {
+            if (!photonView.IsMine) return;
+
             movementInputValue = Input.GetAxis (MOVEMENT_AXIS_NAME);
             turnInputValue = Input.GetAxis (TURN_AXIS_NAME);
 
@@ -93,13 +99,11 @@ namespace Tanks
 
         private void FixedUpdate()
         {
-            // TODO: Only allow owner of this tank to move it
+            if (!photonView.IsMine) return;
 
             Move();
             Turn();
         }
-
-        // TODO: Synchronize position and rotation across clients
 
         private void Move()
         {
