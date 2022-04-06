@@ -40,12 +40,17 @@ namespace Tanks
         {
             if (!photonView.IsMine) return;
 
+            TryFireMissile();
+        }
+
+        private void TryFireMissile()
+        {
             aimSlider.value = minLaunchForce;
 
             if (currentLaunchForce >= maxLaunchForce && !fired)
             {
                 currentLaunchForce = maxLaunchForce;
-                Fire();
+                FireMissile();
             }
             else if (Input.GetButtonDown(FIRE_BUTTON))
             {
@@ -63,16 +68,16 @@ namespace Tanks
             }
             else if (Input.GetButtonUp(FIRE_BUTTON) && !fired)
             {
-                Fire();
+                FireMissile();
             }
         }
 
-        private void Fire()
+        private void FireMissile()
         {
             fired = true;
 
             photonView.RPC(
-                "Fire",
+                "FireMissile",
                 RpcTarget.All,
                 fireTransform.position,
                 fireTransform.rotation,
@@ -82,7 +87,7 @@ namespace Tanks
         }
 
         [PunRPC]
-        private void Fire(Vector3 position, Quaternion rotation, Vector3 velocity)
+        private void FireMissile(Vector3 position, Quaternion rotation, Vector3 velocity)
         {
             Rigidbody shellInstance = Instantiate(shell, position, rotation);
             shellInstance.velocity = velocity;
