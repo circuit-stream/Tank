@@ -28,12 +28,12 @@ namespace Tanks
             Destroy(explosionParticles.gameObject, mainModule.duration);
             Destroy(gameObject);
 
-            TryDamageTanks();
+            TryDamageTanks(other);
         }
 
-        private void TryDamageTanks()
+        private void TryDamageTanks(Collider other)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!PhotonNetwork.IsMasterClient || other.gameObject.layer == LayerMask.NameToLayer("Shield")) return;
 
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, tankMask);
 
@@ -44,6 +44,8 @@ namespace Tanks
 
                 Rigidbody targetRigidbody = photonView.GetComponent<Rigidbody>();
 
+                if (IsShieldBlocking(targetRigidbody.position)) continue;
+
                 photonView.RPC(
                     "OnHit",
                     photonView.Owner,
@@ -52,6 +54,17 @@ namespace Tanks
                     explosionRadius,
                     CalculateDamage(targetRigidbody.position));
             }
+        }
+
+        private bool IsShieldBlocking(Vector3 tankPosition)
+        {
+            var direction = tankPosition - transform.position;
+
+            return Physics.Raycast(
+                transform.position,
+                direction,
+                direction.magnitude,
+                LayerMask.GetMask("Shield"));
         }
 
         private float CalculateDamage(Vector3 targetPosition)
