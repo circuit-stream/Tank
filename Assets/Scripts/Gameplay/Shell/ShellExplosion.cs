@@ -1,3 +1,4 @@
+using System;
 using Photon.Pun;
 using UnityEngine;
 
@@ -20,15 +21,35 @@ namespace Tanks
 
         private void OnTriggerEnter(Collider other)
         {
+            PlayExplosionEffect();
+            TryDamageTanks(other);
+
+            var photonView = GetComponent<PhotonView>();
+            if (photonView != null)
+            {
+                if (PhotonNetwork.IsMasterClient)
+                    PhotonNetwork.Destroy(photonView);
+            }
+            else
+                Destroy(gameObject);
+        }
+
+        public void PlayExplosionEffect()
+        {
+            if (explosionParticles == null) return;
+
             explosionParticles.transform.parent = null;
             explosionParticles.Play();
             explosionAudio.Play();
 
             ParticleSystem.MainModule mainModule = explosionParticles.main;
             Destroy(explosionParticles.gameObject, mainModule.duration);
-            Destroy(gameObject);
+            explosionParticles = null;
+        }
 
-            TryDamageTanks(other);
+        private void OnDestroy()
+        {
+            PlayExplosionEffect();
         }
 
         private void TryDamageTanks(Collider other)
