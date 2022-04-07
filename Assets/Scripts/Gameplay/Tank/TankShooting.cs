@@ -8,6 +8,7 @@ namespace Tanks
     {
         private const string FIRE_BUTTON = "Fire1";
         private const string HOMING_MISSILE_BUTTON = "Fire2";
+        private const string AIR_STRIKE_BUTTON = "Fire3";
 
         public Rigidbody shell;
         public Transform fireTransform;
@@ -18,6 +19,8 @@ namespace Tanks
         public float minLaunchForce = 15f;
         public float maxLaunchForce = 30f;
         public float maxChargeTime = 0.75f;
+
+        public GameObject airStrikePrefab;
 
         public float homingMissileInstantiateOffset = 4;
 
@@ -45,6 +48,7 @@ namespace Tanks
 
             TryFireMissile();
             TryFireHomingMissile();
+            TryFireAirStrike();
         }
 
         private void TryFireHomingMissile()
@@ -82,6 +86,14 @@ namespace Tanks
             clickPos = gotHit ? hit.point : Vector3.zero;
 
             return gotHit;
+        }
+
+        private void TryFireAirStrike()
+        {
+            if (!Input.GetButtonDown(AIR_STRIKE_BUTTON)) return;
+            if (!GetClickPosition(out var clickPos)) return;
+
+            photonView.RPC("FireAirStrike", RpcTarget.All, clickPos + Vector3.up * .001f);
         }
 
         private void TryFireMissile()
@@ -132,6 +144,15 @@ namespace Tanks
         {
             Rigidbody shellInstance = Instantiate(shell, position, rotation);
             shellInstance.velocity = velocity;
+
+            shootingAudio.clip = fireClip;
+            shootingAudio.Play();
+        }
+
+        [PunRPC]
+        private void FireAirStrike(Vector3 position)
+        {
+            Instantiate(airStrikePrefab, position, Quaternion.identity);
 
             shootingAudio.clip = fireClip;
             shootingAudio.Play();

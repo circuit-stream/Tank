@@ -31,7 +31,7 @@ namespace Tanks
                     PhotonNetwork.Destroy(photonView);
             }
             else
-                Destroy(gameObject);
+                Destroy(transform.parent == null ? gameObject : transform.parent.gameObject);
         }
 
         public void PlayExplosionEffect()
