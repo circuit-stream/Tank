@@ -1,3 +1,4 @@
+using Photon.Pun;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,7 +34,7 @@ namespace Tanks
             if (string.IsNullOrEmpty(lobbyNameInput.text)) return;
             LoadingGraphics.Enable();
 
-            // TODO: Join target room
+            PhotonNetwork.JoinRoom(lobbyNameInput.text);
         }
     }
 }
