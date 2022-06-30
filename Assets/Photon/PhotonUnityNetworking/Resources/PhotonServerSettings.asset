@@ -41,6 +41,7 @@ MonoBehaviour:
   - RespawnSpaceship
   - OnHit
   - Turbo
+  - FireAirStrike
   - FireMissile
   DisableAutoOpenWizard: 1
   ShowSettings: 0
