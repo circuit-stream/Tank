@@ -25,7 +25,7 @@ namespace Tanks
 
         private float currentLaunchForce;
         private float chargeSpeed;
-        private bool fired;
+        private bool isChargingMissile;
 
         private void OnEnable()
         {
@@ -41,10 +41,22 @@ namespace Tanks
 
         private void Update()
         {
+            UpdateMissileCharge();
+
             if (!photonView.IsMine) return;
 
             TryFireMissile();
             TryFireHomingMissile();
+        }
+
+        private void UpdateMissileCharge()
+        {
+            aimSlider.value = minLaunchForce;
+
+            if (!isChargingMissile) return;
+
+            currentLaunchForce += chargeSpeed * Time.deltaTime;
+            aimSlider.value = currentLaunchForce;
         }
 
         private void TryFireHomingMissile()
@@ -86,50 +98,48 @@ namespace Tanks
 
         private void TryFireMissile()
         {
-            aimSlider.value = minLaunchForce;
-
-            if (currentLaunchForce >= maxLaunchForce && !fired)
+            if (currentLaunchForce >= maxLaunchForce && isChargingMissile)
             {
                 currentLaunchForce = maxLaunchForce;
                 FireMissile();
             }
             else if (Input.GetButtonDown(FIRE_BUTTON))
             {
-                fired = false;
-                currentLaunchForce = minLaunchForce;
-
-                shootingAudio.clip = chargingClip;
-                shootingAudio.Play();
+                photonView.RPC(nameof(StartChargingMissile), RpcTarget.All);
             }
-            else if (Input.GetButton(FIRE_BUTTON) && !fired)
-            {
-                currentLaunchForce += chargeSpeed * Time.deltaTime;
-
-                aimSlider.value = currentLaunchForce;
-            }
-            else if (Input.GetButtonUp(FIRE_BUTTON) && !fired)
+            else if (Input.GetButtonUp(FIRE_BUTTON) && isChargingMissile)
             {
                 FireMissile();
             }
         }
 
+        [PunRPC]
+        private void StartChargingMissile()
+        {
+            isChargingMissile = true;
+            currentLaunchForce = minLaunchForce;
+
+            shootingAudio.clip = chargingClip;
+            shootingAudio.Play();
+        }
+
+
         private void FireMissile()
         {
-            fired = true;
-
             photonView.RPC(
                 nameof(FireMissile),
                 RpcTarget.All,
                 fireTransform.position,
                 fireTransform.rotation,
                 currentLaunchForce * fireTransform.forward);
-
-            currentLaunchForce = minLaunchForce;
         }
 
         [PunRPC]
         private void FireMissile(Vector3 position, Quaternion rotation, Vector3 velocity)
         {
+            isChargingMissile = false;
+            currentLaunchForce = minLaunchForce;
+
             Rigidbody shellInstance = Instantiate(shell, position, rotation);
             shellInstance.velocity = velocity;
 
