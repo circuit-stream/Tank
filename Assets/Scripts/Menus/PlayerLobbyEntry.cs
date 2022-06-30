@@ -50,7 +50,7 @@ namespace Tanks
 
             if (IsLocalPlayer)
             {
-                PlayerTeam = (player.ActorNumber - 1) % PhotonNetwork.CurrentRoom.MaxPlayers;
+                PlayerTeam = GetAvailableTeam(0);
             }
 
             playerName.text = player.NickName;
@@ -82,9 +82,33 @@ namespace Tanks
             readyButton.gameObject.SetActive(false);
         }
 
+        private int GetAvailableTeam(int desiredTeam)
+        {
+            while (true)
+            {
+                bool available = true;
+
+                foreach (var currentPlayer in PhotonNetwork.PlayerList)
+                {
+                    if (currentPlayer == PhotonNetwork.LocalPlayer) continue;
+
+                    int team = currentPlayer.CustomProperties.ContainsKey("Team") ?
+                        (int) currentPlayer.CustomProperties["Team"] : 0;
+
+                    if (team == desiredTeam)
+                    {
+                        available = false;
+                        desiredTeam = (desiredTeam + 1) % PhotonNetwork.CurrentRoom.MaxPlayers;
+                    }
+                }
+
+                if (available) return desiredTeam;
+            }
+        }
+
         private void OnChangeTeamButtonClicked()
         {
-            PlayerTeam = (PlayerTeam + 1) % PhotonNetwork.CurrentRoom.MaxPlayers;
+            PlayerTeam = GetAvailableTeam((PlayerTeam + 1) % PhotonNetwork.CurrentRoom.MaxPlayers);
         }
 
         private void OnReadyButtonClick(bool isReady)
